@@ -23,12 +23,12 @@ public class CalculatorController {
 
     @GetMapping("/plus")
     public ResponseEntity<CalculatorDto> plusTwoNumbers(CalculatorDto calculatorDto) {
-        log.info("✨핸들러 메소드 실행 여부 및 값 확인 : {}", calculatorDto);
+        log.info("✨핸들러 메소드 실행 여부 및 값 확인!!!!!!!!! : {}", calculatorDto);
 
         /* Service 계층으로 기능 요청 */
         int result = calculatorService.plusTwoNumbers(calculatorDto);
 
-        log.info("🔥서비스 계층 결과값 리턴 확인 {}", result);
+        log.info("🔥서비스 계층 결과값 리턴 확인!!!!!!! {}", result);
         calculatorDto.setSum(result);
 
         return ResponseEntity.ok(calculatorDto);

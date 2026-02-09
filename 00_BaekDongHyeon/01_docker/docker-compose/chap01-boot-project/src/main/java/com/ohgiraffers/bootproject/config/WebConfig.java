@@ -12,6 +12,7 @@ public class WebConfig implements WebMvcConfigurer {
     registry.addMapping("/**")
         /* Vue 프로젝트 기본 포트인 5173번 포트에서 오는 요청에 대한 CORS 설정 해제 */
         .allowedOrigins("http://localhost:5173")
+//        .allowedOrigins("http://localhost:8011")
         .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS");
   }
 }
