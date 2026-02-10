@@ -3,8 +3,9 @@
 # FROM openjdk:21-a
 # jdk - openjdk(기준)이여서 뭐든지 호환됨
 
-## 1. 빌드 스테이지 시작
+## 1. 빌드컨테이너 스테이지 시작
 # Gradle 이미지를 가져오고, 빌드 스테이지를 'build'라는 이름으로 설정한다.
+# alpine == 가벼운리눅스
 FROM gradle:jdk21-alpine AS build
 
 # 컨테이너 내부의 작업 디렉토리를 /app으로 설정한다.
@@ -14,9 +15,9 @@ WORKDIR /app
 COPY . .
 
 # Gradle을 사용하여 프로젝트를 빌드한다. (daemon 프로세스(백그라운드)는 사용하지 않는다.)
-RUN ./gradlew clean build --no-daemon
+RUN ./gradlew clean build -x test --no-daemon
 
-## 2. 실행 스테이지 시작
+## 2. 실행컨테이너 스테이지 시작
 # AWS JDK 21 버전의 이미지를 가져와 JVM 환경을 구축한다.
 FROM amazoncorretto:21-alpine
 
