@@ -1,5 +1,20 @@
 services:
 
+  mariadb:
+    image: mariadb:11
+    container_name: mariadb
+    environment:
+      MARIADB_ROOT_PASSWORD: root1234
+      MARIADB_DATABASE: todolist
+      MARIADB_USER: todouser
+      MARIADB_PASSWORD: todopass
+    ports:
+      - "5506:3306"
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    networks:
+      - app-private
+
   # 서비스 이름
   backend:
     # 지정된 폴더의 Dockerfile을 이용해서 이미지 빌드
@@ -17,6 +32,9 @@ services:
       - app-public
       - app-private
 
+    depends_on:
+      - mariadb
+
 
   # 서비스 이름
   frontend:
@@ -33,7 +51,7 @@ services:
 
   # 서비스 이름
   tester:
-    image: alpine
+    image: alpine # 이미 존재하는 이미지 사용(없으면 docker hub에서 pull)
     container_name: net-tester
     command: sleep 3600       # 실습용으로 쉘 접근 전용
     networks:
@@ -46,3 +64,7 @@ networks:
   app-private:
     driver: bridge
     internal: true            # 외부(호스트) 라우팅 차단
+
+# 볼륨 정의
+volumes:
+  mariadb-data:
