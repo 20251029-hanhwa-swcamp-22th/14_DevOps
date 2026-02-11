@@ -1,0 +1,259 @@
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### Amazon SP-API Sandbox 테스트 가이드
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+### 📋 설정 (Solution Provider Portal에서 복사)
+@lwaClientId = amzn1.sp.solution.47d43141-9b30-4528-8173-56e700393ac6
+@lwaClientSecret = Atzr|IwEBIInk-8MsGKD-qlSWM7qTLLonHnbhUoNrhtllIbfnuoh8lqntyCxBg8FH5taThD9mvKxdqNp7Nzow4Y31Ok4ZFA1wP_9viW95PnehMGGPD2d6lNZgI45SrYq71Og2g20fzijgA6_GGA6YjRFyGkQGWKJRbf0yktAxQ-iVsK-_b0Sg-GoS5R0KZe-a9HRO8yIXqECMC7Gzt5OD5cn1uM-XICjwO09hu7py_xwupHIQBdKTFWUCR5UpsMQQhoa4B-tKI_KuPGMQm37qzbY4pADVWfbFqHknbc3pd6rl46LaS8wL3WXNdzXTJG7x-8hW_nwQTgo
+@refreshToken = Atzr|IwEBIInk-8MsGKD-qlSWM7qTLLonHnbhUoNrhtllIbfnuoh8lqntyCxBg8FH5taThD9mvKxdqNp7Nzow4Y31Ok4ZFA1wP_9viW95PnehMGGPD2d6lNZgI45SrYq71Og2g20fzijgA6_GGA6YjRFyGkQGWKJRbf0yktAxQ-iVsK-_b0Sg-GoS5R0KZe-a9HRO8yIXqECMC7Gzt5OD5cn1uM-XICjwO09hu7py_xwupHIQBdKTFWUCR5UpsMQQhoa4B-tKI_KuPGMQm37qzbY4pADVWfbFqHknbc3pd6rl46LaS8wL3WXNdzXTJG7x-8hW_nwQTgo
+
+### Sandbox 엔드포인트
+@sandboxBaseUrl = https://sandbox.sellingpartnerapi-na.amazon.com
+@marketplaceId = ATVPDKIKX0DER
+
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### STEP 1: Access Token 발급
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+POST https://api.amazon.com/auth/o2/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=refresh_token
+&refresh_token={{refreshToken}}
+&client_id={{lwaClientId}}
+&client_secret={{lwaClientSecret}}
+
+> {%
+    client.global.set("accessToken", response.body.access_token);
+    client.log("✅ Access Token 발급 성공!");
+    client.log("Token: " + response.body.access_token.substring(0, 20) + "...");
+%}
+
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### 📦 ORDERS API - Sandbox 테스트 케이스
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### STEP 2: 주문 목록 조회 (Sandbox - Static Response)
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### 특정 파라미터 조합으로 Mock 응답 받기
+GET {{sandboxBaseUrl}}/orders/v0/orders
+  ?MarketplaceIds={{marketplaceId}}
+  &CreatedAfter=2019-01-01T00:00:00Z
+x-amz-access-token: {{accessToken}}
+
+### 예상 응답:
+### - AmazonOrderId: "902-1845936-5435065"
+### - OrderTotal: $11.01
+### - OrderStatus: "Unshipped"
+
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### STEP 3: 특정 주문 상세 조회 (TEST_CASE_200)
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### Sandbox에서 성공 케이스 테스트
+GET {{sandboxBaseUrl}}/orders/v0/orders/TEST_CASE_200
+x-amz-access-token: {{accessToken}}
+
+### 예상 응답: HTTP 200 - 정상 주문 데이터
+
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### STEP 4: 특정 주문 조회 (실제 Sandbox 주문 ID)
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### Amazon이 제공하는 테스트 주문 ID
+GET {{sandboxBaseUrl}}/orders/v0/orders/902-3159896-1390916
+x-amz-access-token: {{accessToken}}
+
+### 예상 응답:
+### {
+###   "payload": {
+###     "AmazonOrderId": "902-3159896-1390916",
+###     "PurchaseDate": "...",
+###     "OrderStatus": "Unshipped",
+###     "OrderTotal": {
+###       "CurrencyCode": "USD",
+###       "Amount": "..."
+###     }
+###   }
+### }
+
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### STEP 5: 주문 아이템 조회
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GET {{sandboxBaseUrl}}/orders/v0/orders/902-3159896-1390916/orderItems
+x-amz-access-token: {{accessToken}}
+
+### 예상 응답:
+### {
+###   "payload": {
+###     "AmazonOrderId": "902-3159896-1390916",
+###     "OrderItems": [
+###       {
+###         "ASIN": "...",
+###         "SellerSKU": "...",
+###         "Title": "...",
+###         "QuantityOrdered": 1,
+###         "ItemPrice": {
+###           "CurrencyCode": "USD",
+###           "Amount": "..."
+###         }
+###       }
+###     ]
+###   }
+### }
+
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### STEP 6: 주문 구매자 정보 조회 (Buyer Info)
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### 테스트 케이스 사용
+GET {{sandboxBaseUrl}}/orders/v0/orders/TEST_CASE_200/buyerInfo
+x-amz-access-token: {{accessToken}}
+
+### 예상 응답:
+### {
+###   "payload": {
+###     "AmazonOrderId": "902-3159896-1390916",
+###     "BuyerEmail": "user@example.com",
+###     "BuyerName": "John Smith",
+###     "PurchaseOrderNumber": "1234567890123"
+###   }
+### }
+
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### STEP 7: 주문 배송 주소 조회 (Shipping Address)
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### 테스트 케이스 사용
+GET {{sandboxBaseUrl}}/orders/v0/orders/TEST_CASE_200/address
+x-amz-access-token: {{accessToken}}
+
+### 예상 응답:
+### {
+###   "payload": {
+###     "AmazonOrderId": "902-3159896-1390916",
+###     "ShippingAddress": {
+###       "Name": "Michigan address",
+###       "AddressLine1": "1 cross st",
+###       "City": "Canton",
+###       "StateOrRegion": "MI",
+###       "PostalCode": "48817",
+###       "CountryCode": "US"
+###     }
+###   }
+### }
+
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### ⚠️ 에러 테스트 케이스
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+### STEP 8: 404 Not Found 테스트
+GET {{sandboxBaseUrl}}/orders/v0/orders/TEST_CASE_404
+x-amz-access-token: {{accessToken}}
+
+### 예상 응답: HTTP 404
+### {
+###   "errors": [
+###     {
+###       "code": "NotFound",
+###       "message": "The specified order could not be found."
+###     }
+###   ]
+### }
+
+
+### STEP 9: 400 Bad Request 테스트
+GET {{sandboxBaseUrl}}/orders/v0/orders/TEST_CASE_400
+x-amz-access-token: {{accessToken}}
+
+### 예상 응답: HTTP 400
+### {
+###   "errors": [
+###     {
+###       "code": "InvalidInput",
+###       "message": "Invalid request parameters."
+###     }
+###   ]
+### }
+
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### 📊 전체 Sandbox 테스트 케이스 목록
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+### 성공 케이스:
+### - TEST_CASE_200 → HTTP 200 OK (정상 응답)
+### - 902-3159896-1390916 → 실제 Sandbox 주문 ID
+### - 902-1845936-5435065 → 또 다른 Sandbox 주문 ID
+
+### 에러 케이스:
+### - TEST_CASE_400 → HTTP 400 Bad Request
+### - TEST_CASE_404 → HTTP 404 Not Found
+
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### 💡 Sandbox 사용 팁
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+### 1. Static Sandbox vs Dynamic Sandbox
+###
+### Static Sandbox (우리가 사용 중):
+### - 고정된 파라미터 → 고정된 응답
+### - 특정 주문 ID로 호출하면 항상 같은 응답
+### - 대부분의 API 지원
+###
+### Dynamic Sandbox:
+### - 입력값에 따라 다른 응답
+### - 상태를 가짐 (Stateful)
+### - 일부 API만 지원
+
+### 2. Sandbox에서 실제 데이터는 없습니다!
+### - 모든 응답은 Mock 데이터
+### - 실제 주문이 아님
+### - Production으로 전환 시 URL만 변경하면 됨
+
+### 3. Rate Limit
+### - Sandbox: 5 req/sec, burst 15
+### - Production: API별로 다름
+
+### 4. Production 전환 방법
+### @productionBaseUrl = https://sellingpartnerapi-na.amazon.com
+### → URL만 변경하면 끝!
+
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### 🔍 다음 단계: Production 테스트
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+### Sandbox 테스트 완료 후:
+### 1. Seller Central에서 실제 판매자 인증
+### 2. Production Refresh Token 발급
+### 3. baseUrl을 Production으로 변경
+### 4. 실제 주문 데이터로 테스트
+
+# ### Production 주문 조회 (예시 - 주석 처리)
+# GET https://sellingpartnerapi-na.amazon.com/orders/v0/orders
+#   ?MarketplaceIds={{marketplaceId}}
+#   &CreatedAfter=2024-01-01T00:00:00Z
+# x-amz-access-token: {{accessToken}}
+
+
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### 📚 참고 자료
+### ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+### Amazon SP-API 공식 문서:
+### https://developer-docs.amazon.com/sp-api/docs/welcome
+
+### Orders API 레퍼런스:
+### https://developer-docs.amazon.com/sp-api/docs/orders-api-v0-reference
+
+### Sandbox 가이드:
+### https://developer-docs.amazon.com/sp-api/docs/the-selling-partner-api-sandbox
+
+### Swagger 모델 (테스트 케이스 확인):
+### https://github.com/amzn/selling-partner-api-models/blob/main/models/orders-api-model/ordersV0.json
