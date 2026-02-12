@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-config
+data: # 공개되도 상관없느 정보
+  database_url: "jdbc:mariadb://localhost:3306/menudb" # DB 설정정보
+  timeout: "30"
