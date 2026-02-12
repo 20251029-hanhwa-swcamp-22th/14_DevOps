@@ -8,7 +8,10 @@ const result = ref(0);
 
 const sendPlus = async () => {
   /* NodePort에 설정된 30001번 포트 요청*/
-  const response = await axios.get(`http://localhost:30001/plus?num1=${num1.value}&num2=${num2.value}`);
+  // const response = await axios.get(`http://localhost:30001/plus?num1=${num1.value}&num2=${num2.value}`);
+
+  /* Ingress를 이용한 절대 경로 통신 */
+  const response = await axios.get(`/boot/plus?num1=${num1.value}&num2=${num2.value}`);
 
   const data = response.data
   console.log(`data : `, data);
