@@ -21,7 +21,8 @@ const sendPlus = async () => {
 
 <template>
   <div class="plus">
-    <h1>덧셈 기능 만들기!@!@!@!@!@</h1>
+    <h1>Version. 2</h1>
+    <h1>덧셈 기능 만들기</h1>
     <label>num1 : </label>
     <input type="text" v-model="num1">&nbsp;
     <label>num2 : </label>
