@@ -1,0 +1,10 @@
+# configmap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: service-config
+data:
+  SPRING_DATASOURCE_URL: "jdbc:mariadb://mariadb:3306/orderdb"
+  MARIADB_DATABASE: "orderdb"
+  RABBITMQ_HOST: "rabbitmq"
+  RABBITMQ_PORT: "5672"

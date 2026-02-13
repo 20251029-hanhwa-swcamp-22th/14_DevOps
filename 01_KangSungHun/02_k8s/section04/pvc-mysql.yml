@@ -1,0 +1,11 @@
+# pvc-mysql.yml
+apiVersion: v1
+kind: PersistentVolumeClaim # 리소스 종류: 스토리지 자원을 요청하는 PVC 정의
+metadata:
+  name: pvc-mysql           # 이 요청서(클레임)의 이름. 나중에 파드에서 이 이름을 참조함
+spec:
+  accessModes:
+    - ReadWriteOnce        # 접근 모드: PV에 설정된 것과 동일하게 '하나의 노드에서만 읽기/쓰기' 요청
+  resources:
+    requests:
+      storage: 2Gi         # 요청 용량: "나에게 2Gi만큼의 저장 공간을 할당해줘"라고 요청
