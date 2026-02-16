@@ -1,0 +1,12 @@
+@host = http://localhost
+@json = application/json
+
+### 1) Order create (basic)
+POST {{host}}/orders
+Content-Type: {{json}}
+
+{
+  "userId": "user-1",
+  "productId": "product-1",
+  "quantity": 1
+}

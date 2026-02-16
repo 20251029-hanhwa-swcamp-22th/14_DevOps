@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vue003dep
+spec:
+  replicas: 3 # 여러 개의 Pod을 운영하여 무중단 배포를 테스트
+  selector:
+    matchLabels:
+      app: vue003kube
+  template:
+    metadata:
+      labels:
+        app: vue003kube
+    spec:
+      containers:
+        - name: vue-container
+          image: cyhhoo/k8s-vue-ing:v1 # 초기 배포 시 v1 이미지 사용
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1 # 배포 중 사용할 수 없는 최대 Pod 수
+      maxSurge: 1       # 배포 시 추가 생성 가능한 최대 Pod 수

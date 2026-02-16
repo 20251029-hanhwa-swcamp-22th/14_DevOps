@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vue006dep
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vue006kube
+  template:
+    metadata:
+      labels:
+        app: vue006kube
+    spec:
+      containers:
+        - name: vue-container
+          image: cyhhoo/k8s-vue-ing:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+#              port: 8080                # 잘못된 포트로 설정하여 livenessProbe 실패 유도
+            initialDelaySeconds: 5       # 컨테이너 시작 후 5초 대기 후 확인 시작
+            periodSeconds: 5             # 5초마다 헬스 체크
+            failureThreshold: 1          # 1회 실패 시 컨테이너 재시작 트리거
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+#              port: 8080                # 잘못된 포트로 설정하여 readinessProbe 실패 유도
+            initialDelaySeconds: 3       # 컨테이너 시작 후 3초 대기 후 확인 시작
+            periodSeconds: 5             # 5초마다 헬스 체크
+            failureThreshold: 1          # 1회 실패 시 준비 상태에서 제외
