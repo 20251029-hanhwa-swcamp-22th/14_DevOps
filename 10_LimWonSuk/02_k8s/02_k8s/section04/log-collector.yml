@@ -1,0 +1,29 @@
+# log-collector.yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: log-collector # 파드의 이름 정의
+spec:
+  containers:
+    # [컨테이너 1] 로그 생성기 (Writer)
+    - name: web-app
+      image: busybox
+      # 5초마다 현재 날짜와 메시지를 /var/log/webapp.log 파일에 추가 기록
+      command: ["sh", "-c", "while true; do echo $(date) Hello from web app >> /var/log/webapp.log; sleep 5; done"]
+      volumeMounts:
+        - name: logs          # 아래 정의된 'logs' 볼륨을 참조
+          mountPath: /var/log  # 컨테이너 내 저장 경로 (이 경로에 쓴 데이터는 볼륨에 저장됨)
+
+    # [컨테이너 2] 로그 감시자 (Reader)
+    - name: log-monitor
+      image: busybox
+      # 공유된 경로의 로그 파일을 실시간으로 읽어서 표준 출력(stdout)으로 전달
+      command: ["sh", "-c", "tail -f /var/log/webapp.log"]
+      volumeMounts:
+        - name: logs          # 컨테이너 1과 '동일한' 이름의 볼륨을 참조
+          mountPath: /var/log  # 동일한 경로를 마운트하여 컨테이너 1이 쓴 파일을 읽음
+
+  # 파드 내부에서 컨테이너들이 공유할 저장소 정의
+  volumes:
+    - name: logs            # 볼륨 식별자 (컨테이너들이 이 이름을 보고 연결함)
+      emptyDir: {}          # 임시 저장소 타입: 파드가 실행되는 동안만 유지되며 삭제 시 데이터 소멸
