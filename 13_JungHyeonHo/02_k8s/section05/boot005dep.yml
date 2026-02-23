@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: boot005dep # 디플로이먼트 리소스의 이름
+spec:
+  replicas: 1 # 실행할 파드(Pod)의 개수
+  selector:
+    matchLabels:
+      app: boot005kube # 어떤 파드를 관리할지 결정하는 라벨 조건
+  template:
+    metadata:
+      labels:
+        app: boot005kube # 생성되는 파드에 부착되는 라벨
+    spec:
+      containers:
+        - name: boot-container
+          image: gusgh07/k8s-boot-ing:latest # 사용할 애플리케이션 이미지
+          env:
+            # [1] 일반 설정 정보: ConfigMap에서 참조
+            - name: DATABASE_URL # 애플리케이션 내부에서 인식할 환경 변수 이름
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config # 참조할 ConfigMap 리소스 이름
+                  key: database_url # 해당 ConfigMap 내부에 정의된 키(Key) 이름
+            - name: TIMEOUT
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: timeout
+
+            # [2] 보안이 필요한 정보: Secret에서 참조
+            - name: USERNAME # 데이터베이스 사용자 계정명
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret # 참조할 Secret 리소스 이름 (보통 base64 인코딩되어 저장됨)
+                  key: username # Secret 내부에 정의된 키 이름
+            - name: PASSWORD # 데이터베이스 비밀번호
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: password
