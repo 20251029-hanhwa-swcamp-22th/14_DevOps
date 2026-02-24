@@ -18,11 +18,11 @@ services:
     container_name: order-service
     ports:
       - "8080:8080"
-    environment:
+    environment: # 환경 변수
       - SPRING_DATASOURCE_URL=jdbc:mariadb://db:3306/orders?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=root
-    depends_on:
+    depends_on: # 아래 작성된 서비스가 모두 실행된 후 해당 서비스 실행
       - db
       - elasticsearch
       - logstash
@@ -76,7 +76,9 @@ services:
     depends_on:
       - prometheus
 
+# 볼륨 : 컨테이너 종류 후에도 데이터 유지
+# + 로컬/컨테이너 데이터 동기화
 volumes:
-  db_data:
+  db_data: # 도커 제공 가상 폴더
   es_data:
   grafana_data:

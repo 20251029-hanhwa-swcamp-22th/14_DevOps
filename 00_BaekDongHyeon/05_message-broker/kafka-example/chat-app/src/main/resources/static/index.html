@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Kafka Chat Room</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+</head>
+<body>
+<h2>Kafka 기반 채팅</h2>
+
+<label for="sender">닉네임:</label>
+<input type="text" id="sender" placeholder="닉네임 입력" />
+<br />
+
+<label for="message">메시지:</label>
+<input type="text" id="message" placeholder="메시지 입력" />
+<button onclick="sendMessage()">보내기</button>
+
+<h3>채팅 로그 (room1)</h3>
+<div id="messages" style="border:1px solid #ccc; padding:10px; width:400px; height:200px; overflow-y:scroll;"></div>
+
+<script>
+    const socket = new SockJS('/ws-chat'); // Spring WebSocket endpoint
+    const stompClient = Stomp.over(socket);
+
+    stompClient.connect({}, function () {
+        console.log("WebSocket 연결됨");
+
+        stompClient.subscribe('/topic/room/room1', function (message) {
+            const msg = JSON.parse(message.body);
+            const line = `[${msg.timestamp}] ${msg.sender}: ${msg.message}`;
+            document.getElementById("messages").innerHTML += `<div>${line}</div>`;
+        });
+    });
+
+    function sendMessage() {
+        const sender = document.getElementById("sender").value;
+        const message = document.getElementById("message").value;
+        stompClient.send("/app/chat.send", {}, JSON.stringify({
+            roomId: "room1",
+            sender: sender,
+            message: message,
+            timestamp: new Date().toISOString()
+        }));
+
+        document.getElementById("message").value = "";
+    }
+</script>
+</body>
+</html>

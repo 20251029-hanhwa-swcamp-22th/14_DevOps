@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WebSocket + STOMP Demo</title>
+  <style>
+    :root {
+      --bg: #f4f6fb;
+      --card: #ffffff;
+      --ink: #1f2937;
+      --accent: #0f766e;
+      --muted: #6b7280;
+      --border: #d1d5db;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Pretendard", "Noto Sans KR", sans-serif;
+      background: radial-gradient(circle at top left, #dbeafe, var(--bg));
+      color: var(--ink);
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      box-sizing: border-box;
+    }
+
+    .card {
+      width: min(760px, 100%);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      padding: 20px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.3rem;
+    }
+
+    .description {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    input, button {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 0.95rem;
+    }
+
+    #name {
+      width: 180px;
+    }
+
+    #message {
+      flex: 1;
+      min-width: 240px;
+    }
+
+    button {
+      cursor: pointer;
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+      font-weight: 600;
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    #status {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin: 6px 0 10px;
+    }
+
+    #messages {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      min-height: 260px;
+      max-height: 360px;
+      overflow: auto;
+      padding: 12px;
+      margin: 0;
+      list-style: none;
+    }
+
+    .item {
+      padding: 10px;
+      border-bottom: 1px dashed #e5e7eb;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+
+    .item:last-child {
+      border-bottom: none;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 0.82rem;
+      margin-bottom: 2px;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>WebSocket + STOMP 초간단 채팅 데모</h1>
+    <p class="description">브라우저 탭 두 개를 열고 같은 주소에서 실시간 메시지 브로드캐스트를 확인하세요.</p>
+
+    <div class="row">
+      <input id="name" type="text" placeholder="보내는 사람" />
+      <button id="connectBtn">연결</button>
+      <button id="disconnectBtn" disabled>연결 해제</button>
+    </div>
+
+    <div id="status">상태: 연결 안됨</div>
+
+    <div class="row">
+      <input id="message" type="text" placeholder="메시지를 입력하고 Enter" disabled />
+      <button id="sendBtn" disabled>전송</button>
+    </div>
+
+    <ul id="messages"></ul>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+  <script>
+    let stompClient = null;
+
+    const nameEl = document.getElementById('name');
+    const messageEl = document.getElementById('message');
+    const messagesEl = document.getElementById('messages');
+    const statusEl = document.getElementById('status');
+    const connectBtn = document.getElementById('connectBtn');
+    const disconnectBtn = document.getElementById('disconnectBtn');
+    const sendBtn = document.getElementById('sendBtn');
+    const ENTER_SEND_GUARD_MS = 300;
+    let isComposing = false;
+    let lastEnterSendAt = 0;
+
+    connectBtn.addEventListener('click', connect);
+    disconnectBtn.addEventListener('click', disconnect);
+    sendBtn.addEventListener('click', sendMessage);
+    messageEl.addEventListener('compositionstart', () => {
+      isComposing = true;
+    });
+    messageEl.addEventListener('compositionend', () => {
+      isComposing = false;
+    });
+    messageEl.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') {
+        return;
+      }
+      if (isComposing || e.isComposing || e.keyCode === 229 || e.repeat) {
+        return;
+      }
+      const now = Date.now();
+      if (now - lastEnterSendAt < ENTER_SEND_GUARD_MS) {
+        e.preventDefault();
+        return;
+      }
+      e.preventDefault();
+      if (sendMessage()) {
+        lastEnterSendAt = now;
+      }
+    });
+
+    function connect() {
+      const username = document.getElementById('name');
+      if(username.value.trim() === '') {
+        alert('이름을 입력해주세요.');
+        username.focus();
+        return;
+      }
+
+      const socket = new SockJS('/ws');
+      stompClient = Stomp.over(socket);
+      stompClient.connect({}, () => {
+        setConnected(true);
+        statusEl.textContent = '상태: 연결됨 (/ws, /topic/public 구독 중)';
+
+        stompClient.subscribe('/topic/public', (payload) => {
+          const msg = JSON.parse(payload.body);
+          appendMessage(msg);
+        });
+      }, (error) => {
+        statusEl.textContent = `상태: 연결 실패 (${error})`;
+      });
+    }
+
+    function disconnect() {
+      if (stompClient) {
+        stompClient.disconnect();
+      }
+      setConnected(false);
+      statusEl.textContent = '상태: 연결 안됨';
+    }
+
+    function setConnected(connected) {
+      connectBtn.disabled = connected;
+      disconnectBtn.disabled = !connected;
+      messageEl.disabled = !connected;
+      sendBtn.disabled = !connected;
+    }
+
+    function sendMessage() {
+      const content = messageEl.value.trim();
+      if (!content || !stompClient) {
+        return false;
+      }
+
+      stompClient.send('/app/chat.send', {}, JSON.stringify({
+        sender: nameEl.value.trim() || '익명',
+        content: content
+      }));
+
+      messageEl.value = '';
+      messageEl.focus();
+      return true;
+    }
+
+    function appendMessage(msg) {
+      const li = document.createElement('li');
+      li.className = 'item';
+      const timeText = formatTimestamp(msg.sentAt);
+      li.innerHTML = `<div class="meta">${timeText} | ${escapeHtml(msg.sender || '익명')}</div><div>${escapeHtml(msg.content || '')}</div>`;
+      messagesEl.prepend(li);
+    }
+
+    function formatTimestamp(sentAt) {
+      if (!sentAt) {
+        return '-';
+      }
+
+      if (Array.isArray(sentAt)) {
+        const [y, m, d, hh, mm, ss = 0] = sentAt;
+        return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')} ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+      }
+
+      return String(sentAt).replace('T', ' ').replace(/\..*$/, '');
+    }
+
+    function escapeHtml(value) {
+      return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,167 @@
+### 샘플 주문 데이터 추가
+POST http://localhost:8080/orders
+Content-Type: application/json
+
+{
+  "product": "새상품",
+  "quantity": 3,
+  "price": 16000
+}
+
+### 주문 목록 조회
+GET http://localhost:8080/orders
+
+
+
+###
+# curl -X GET "http://localhost:9200/order-service-*/_search" -H 'Content-Type: application/json' -d '
+#{
+#  "query": {
+#    "match": {
+#      "level": "WARN"
+#    }
+#  }
+#}'
+GET http://localhost:9200/order-service-*/_search
+Content-Type: application/json
+
+
+{
+  "query": {
+    "match": {
+      "level": "WARN"
+    }
+  }
+}
+
+###
+
+
+
+# curl -X GET "http://localhost:9200/order-service-*/_search" -H 'Content-Type: application/json' -d '
+#{
+#  "query": {
+#    "match": {
+#      "message": "Order created"
+#    }
+#  }
+#}'
+GET http://localhost:9200/order-service-*/_search
+Content-Type: application/json
+
+
+{
+  "query": {
+    "match": {
+      "message": "Order created"
+    }
+  }
+}
+
+###
+
+
+
+# curl -X GET "http://localhost:9200/order-service-*/_search" -H 'Content-Type: application/json' -d '
+#{
+#  "query": {
+#    "range": {
+#      "@timestamp": {
+#        "gte": "now-1h",
+#        "lte": "now"
+#      }
+#    }
+#  }
+#}'
+GET http://localhost:9200/order-service-*/_search
+Content-Type: application/json
+
+
+{
+  "query": {
+    "range": {
+      "@timestamp": {
+        "gte": "now-1h",
+        "lte": "now"
+      }
+    }
+  }
+}
+
+###
+
+
+
+# curl -X GET "http://localhost:9200/order-service-*/_search" -H 'Content-Type: application/json' -d '
+#{
+#  "query": {
+#    "bool": {
+#      "must": [
+#        { "match": { "level": "INFO" } },
+#        { "match": { "message": "Order list" } }
+#      ]
+#    }
+#  }
+#}'
+GET http://localhost:9200/order-service-*/_search
+Content-Type: application/json
+
+
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "match": {
+            "level": "INFO"
+          }
+        },
+        {
+          "match": {
+            "message": "Order list"
+          }
+        }
+      ]
+    }
+  }
+}
+
+###
+
+
+# curl -X GET "http://localhost:9200/order-service-*/_search" -H 'Content-Type: application/json' -d '
+#{
+#  "size": 3,
+#  "query": {
+#    "match_all": {}
+#  }
+#}'
+GET http://localhost:9200/order-service-*/_search
+Content-Type: application/json
+
+
+{
+  "size": 3,
+  "query": {
+    "match_all": {}
+  }
+}
+
+###
+
+
+### spring actuator health check
+GET http://localhost:8080/actuator/health
+
+
+### spring actuator prometheus
+GET http://localhost:8080/actuator/prometheus
+
+
+### order service 404 에러 발생
+GET http://localhost:8080/orders/hello
+
+
+### order service 400 에러 발생
+POST http://localhost:8080/orders
+Content-Type: application/json
