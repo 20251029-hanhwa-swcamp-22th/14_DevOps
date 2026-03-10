@@ -1,0 +1,97 @@
+# RabbitMQ 기반 마이크로서비스 실습용 compose 파일
+# - order-service: 주문 생성 + 이벤트 발행(Producer)
+# - payment-service: 주문 이벤트 구독 후 결제 처리(Consumer)
+# - inventory-service: 주문 이벤트 구독 후 재고 처리(Consumer)
+# - db: 각 서비스가 공통으로 사용하는 MariaDB
+services:
+  # 메시지 브로커
+  # 5672: 애플리케이션 연결 포트(AMQP), 15672: 관리 콘솔
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  # 관계형 DB (실습 편의를 위해 단일 DB 컨테이너 사용)
+  db:
+    image: mariadb:10.7
+    container_name: order-db
+    # DB 초기 계정 및 기본 스키마 설정
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: orderdb
+      MARIADB_USER: orderuser
+      MARIADB_PASSWORD: orderpass
+    # 호스트 3307 -> 컨테이너 3306
+    ports:
+      - "3307:3306"
+    # 데이터 영속화: 컨테이너 재시작 후에도 DB 파일 유지
+    volumes:
+      - db_data:/var/lib/mysql
+    # DB 준비 완료 전 서비스가 먼저 뜨지 않도록 헬스체크
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uorderuser", "-porderpass"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 주문 서비스(Producer)
+  # 주문 저장 후 RabbitMQ로 order.created 이벤트 발행
+  order-service:
+    build: ./order-service
+    ports:
+      - "8081:8081"
+    # DB는 healthcheck 통과 후, RabbitMQ는 시작 후 실행
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    # 컨테이너 내부 네트워크 기준 접속 정보
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mariadb://db:3306/orderdb
+      SPRING_DATASOURCE_USERNAME: orderuser
+      SPRING_DATASOURCE_PASSWORD: orderpass
+
+  # 결제 서비스(Consumer)
+  # payment.queue를 구독하여 결제 처리
+  payment-service:
+    build: ./payment-service
+    ports:
+      - "8082:8082"
+    # 주문 이벤트를 소비하므로 order-service 시작 이후 실행
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+      order-service:
+        condition: service_started
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mariadb://db:3306/orderdb
+      SPRING_DATASOURCE_USERNAME: orderuser
+      SPRING_DATASOURCE_PASSWORD: orderpass
+
+  # 재고 서비스(Consumer)
+  # inventory.queue를 구독하여 재고 예약/차감 처리
+  inventory-service:
+    build: ./inventory-service
+    ports:
+      - "8083:8083"
+    # 주문 이벤트를 소비하므로 order-service 시작 이후 실행
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+      order-service:
+        condition: service_started
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mariadb://db:3306/orderdb
+      SPRING_DATASOURCE_USERNAME: orderuser
+      SPRING_DATASOURCE_PASSWORD: orderpass
+
+# Named volume 정의
+# - db_data: MariaDB 데이터 파일 영속화 영역
+volumes:
+  db_data:

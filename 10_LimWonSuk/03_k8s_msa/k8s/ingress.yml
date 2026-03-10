@@ -1,0 +1,33 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: msa-ingress
+  annotations: {}
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: localhost
+      http:
+        paths:
+          - path: /orders
+            pathType: Prefix
+            backend:
+              service:
+                name: order-service
+                port:
+                  number: 80
+# 다른 기능도 있을 경우 필요할 수 있음 (현재는 없음)
+#          - path: /payments
+#            pathType: Prefix
+#            backend:
+#              service:
+#                name: payment-service
+#                port:
+#                  number: 80
+#          - path: /inventory
+#            pathType: Prefix
+#            backend:
+#              service:
+#                name: inventory-service
+#                port:
+#                  number: 80
