@@ -1,0 +1,28 @@
+### -------------------------------------------------------------------
+### RabbitMQ + order-service 통합 테스트용 .http 파일
+###
+### [사전 준비]
+### 1) 아래 명령으로 컨테이너 실행
+###    - docker compose up --build -d
+### 2) order-service 접속 가능 확인
+###    - http://localhost:8081
+### 3) RabbitMQ 관리 콘솔 접속 가능 확인
+###    - http://localhost:15672 (기본 계정: guest / guest)
+### -------------------------------------------------------------------
+
+### 주문 생성 API 호출
+### 목적:
+### - order-service가 주문을 DB에 저장하고
+### - RabbitMQ exchange(order.exchange)로 order.created 이벤트를 발행하는지 확인
+###
+### 기대 결과:
+### - HTTP 200 응답 + 생성된 주문 정보(JSON)
+### - order-service 로그에 저장/발행 관련 로그 출력
+POST http://localhost:8081/api/orders
+Content-Type: application/json
+
+{
+  "userId": "user-100",
+  "productId": "product-1",
+  "quantity": 2
+}

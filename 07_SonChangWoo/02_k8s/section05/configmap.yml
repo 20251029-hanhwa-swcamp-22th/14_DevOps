@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-config
+data:
+  database_url: "jdbc:mariadb://localhost:3306/menudb"
+  timeout: "30"

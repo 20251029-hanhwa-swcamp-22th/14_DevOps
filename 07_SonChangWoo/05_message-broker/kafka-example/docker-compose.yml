@@ -1,0 +1,91 @@
+# Docker Compose 파일 (Compose Specification)
+# - 이 파일은 "채팅 앱 3개 + Kafka + ZooKeeper" 로컬 실습 환경을 한 번에 구성함.
+# - 실행: docker compose up -d
+# - 종료: docker compose down
+# - 네트워크: Compose 기본 네트워크에서 서비스명(zookeeper, kafka)이 곧 DNS 호스트명이 됨.
+
+services:
+  # ZooKeeper
+  # - Kafka(전통 모드) 관제실 역할로 메타데이터 관리를 담당함.
+  # - 실습 단순화를 위해 단일 노드로 구성.
+  # - 최근에는 Kafka는 ZooKeeper 없이 동작하는 KRaft 모드를 권장.
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    ports:
+      # 호스트 2181 -> 컨테이너 2181
+      # (호스트에서 직접 ZooKeeper 상태 확인/접속이 필요할 때 사용)
+      - "2181:2181"
+    environment:
+      # ZooKeeper 클라이언트 접속 포트
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  # Kafka Broker
+  # - 메시지를 저장/전달하는 핵심 브로커.
+  # - 현재는 단일 브로커(학습용) 구성.
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    ports:
+      # 호스트 9092 -> 컨테이너 9092
+      # (외부 클라이언트 테스트 시 사용 가능)
+      - "9092:9092"
+    environment:
+      # 브로커 고유 ID (클러스터에서 브로커 식별자 역할)
+      KAFKA_BROKER_ID: 1
+
+      # Kafka가 연결할 ZooKeeper 주소
+      # - 같은 Compose 네트워크 안에서는 "서비스명:포트" 형식으로 접근
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+
+      # 클라이언트에게 "나에게 이렇게 접속하라"라고 알려주는 주소
+      # - 현재 값은 컨테이너 간 통신에 적합: kafka:9092
+      # - 호스트(로컬 PC)에서 직접 붙을 경우 localhost:9092 형태 추가 구성이 필요할 수 있음
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+
+      # 내부 오프셋 토픽 복제 계수
+      # - 단일 브로커 환경에서는 반드시 1이어야 정상 동작
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      # 컨테이너 "시작 순서"만 보장 (서비스 준비 완료까지 보장하지는 않음)
+      - zookeeper
+
+  # 채팅 애플리케이션 인스턴스 1
+  # - 같은 이미지를 쓰되 프로필(replica1)로 설정만 다르게 실행
+  # - 수평 확장/멀티 인스턴스 개념 실습용
+  chat-app-1:
+    build: ./chat-app
+    container_name: chat-app-1
+    ports:
+      # 호스트 8081 -> 컨테이너 8080
+      - "8081:8080"
+    environment:
+      # Spring Boot 실행 프로필
+      - SPRING_PROFILES_ACTIVE=replica1
+    depends_on:
+      # Kafka 컨테이너 시작 이후 앱 시작
+      - kafka
+
+  # 채팅 애플리케이션 인스턴스 2
+  chat-app-2:
+    build: ./chat-app
+    container_name: chat-app-2
+    ports:
+      # 호스트 8082 -> 컨테이너 8080
+      - "8082:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=replica2
+    depends_on:
+      - kafka
+
+  # 채팅 애플리케이션 인스턴스 3
+  chat-app-3:
+    build: ./chat-app
+    container_name: chat-app-3
+    ports:
+      # 호스트 8083 -> 컨테이너 8080
+      - "8083:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=replica3
+    depends_on:
+      - kafka
