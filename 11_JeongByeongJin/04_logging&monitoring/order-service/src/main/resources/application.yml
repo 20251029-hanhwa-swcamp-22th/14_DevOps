@@ -1,0 +1,27 @@
+spring:
+  datasource:
+    # 환경변수 우선 적용, 없을 경우 로컬 개발용 기본값 사용
+    # 운영/Docker 환경에서는 docker-compose.yml의 SPRING_DATASOURCE_* 환경변수로 주입됨
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://db:3306/orders?useSSL=false&serverTimezone=UTC}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:root}
+
+  jpa:
+    hibernate:
+      # update: 엔티티 변경 시 스키마 자동 반영 (운영 환경에서는 validate 또는 none 권장)
+      ddl-auto: update
+    # 실행되는 SQL을 콘솔에 출력 (디버깅용, 운영 환경에서는 false 권장)
+    show-sql: true
+
+# Spring Actuator: 애플리케이션 모니터링 엔드포인트 설정
+management:
+  endpoints:
+    web:
+      exposure:
+        # health: 헬스체크 (로드밸런서/k8s liveness probe에 활용)
+        # prometheus: Prometheus가 메트릭을 스크래핑하는 엔드포인트 (/actuator/prometheus)
+        include: health,prometheus
+  endpoint:
+    health:
+      # 디스크, DB 등 상세 헬스 정보를 응답에 포함
+      show-details: always
